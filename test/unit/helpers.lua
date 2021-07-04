@@ -1,11 +1,11 @@
-local ffi = require('ffi')
-local formatc = require('test.unit.formatc')
-local Set = require('test.unit.set')
-local Preprocess = require('test.unit.preprocess')
-local Paths = require('test.config.paths')
-local global_helpers = require('test.helpers')
-local assert = require('luassert')
-local say = require('say')
+local ffi = require "ffi"
+local formatc = require "test.unit.formatc"
+local Set = require "test.unit.set"
+local Preprocess = require "test.unit.preprocess"
+local Paths = require "test.config.paths"
+local global_helpers = require "test.helpers"
+local assert = require "luassert"
+local say = require "say"
 
 local posix = nil
 local syscall = nil
@@ -18,7 +18,7 @@ local eq = global_helpers.eq
 local trim = global_helpers.trim
 
 -- C constants.
-local NULL = ffi.cast('void*', 0)
+local NULL = ffi.cast("void*", 0)
 
 local OK = 1
 local FAIL = 0
@@ -34,7 +34,7 @@ local child_pid = nil
 local function only_separate(func)
   return function(...)
     if child_pid ~= 0 then
-      error('This function must be run in a separate process only')
+      error "This function must be run in a separate process only"
     end
     return func(...)
   end
@@ -46,7 +46,7 @@ local function child_call(func, ret)
   return function(...)
     local child_calls = child_calls_mod or child_calls_init
     if child_pid ~= 0 then
-      child_calls[#child_calls + 1] = {func=func, args={...}}
+      child_calls[#child_calls + 1] = { func = func, args = { ... } }
       return ret
     else
       return func(...)
@@ -59,7 +59,9 @@ end
 local function child_call_once(func, ...)
   if child_pid ~= 0 then
     child_calls_mod_once[#child_calls_mod_once + 1] = {
-      func=func, args={...}}
+      func = func,
+      args = { ... },
+    }
   else
     func(...)
   end
@@ -72,7 +74,7 @@ local child_cleanups_mod_once = nil
 local function child_cleanup_once(func, ...)
   local child_cleanups = child_cleanups_mod_once
   if child_pid ~= 0 then
-    child_cleanups[#child_cleanups + 1] = {func=func, args={...}}
+    child_cleanups[#child_cleanups + 1] = { func = func, args = { ... } }
   else
     func(...)
   end
@@ -131,14 +133,18 @@ local pragma_pack_id = 1
 local function filter_complex_blocks(body)
   local result = {}
 
-  for line in body:gmatch("[^\r\n]+") do
-    if not (string.find(line, "(^)", 1, true) ~= nil
-            or string.find(line, "_ISwupper", 1, true)
-            or string.find(line, "_Float")
-            or string.find(line, "msgpack_zone_push_finalizer")
-            or string.find(line, "msgpack_unpacker_reserve_buffer")
-            or string.find(line, "UUID_NULL")  -- static const uuid_t UUID_NULL = {...}
-            or string.find(line, "inline _Bool")) then
+  for line in body:gmatch "[^\r\n]+" do
+    if
+      not (
+        string.find(line, "(^)", 1, true) ~= nil
+        or string.find(line, "_ISwupper", 1, true)
+        or string.find(line, "_Float")
+        or string.find(line, "msgpack_zone_push_finalizer")
+        or string.find(line, "msgpack_unpacker_reserve_buffer")
+        or string.find(line, "UUID_NULL") -- static const uuid_t UUID_NULL = {...}
+        or string.find(line, "inline _Bool")
+      )
+    then
       result[#result + 1] = line
     end
   end
@@ -146,18 +152,17 @@ local function filter_complex_blocks(body)
   return table.concat(result, "\n")
 end
 
-
 local cdef = ffi.cdef
 
 local cimportstr
 
-local previous_defines_init = ''
+local previous_defines_init = ""
 local preprocess_cache_init = {}
-local previous_defines_mod = ''
+local previous_defines_mod = ""
 local preprocess_cache_mod = nil
 
 local function is_child_cdefs()
-  return (os.getenv('NVIM_TEST_MAIN_CDEFS') ~= '1')
+  return (os.getenv "NVIM_TEST_MAIN_CDEFS" ~= "1")
 end
 
 -- use this helper to import C files, you can pass multiple paths at once,
@@ -173,19 +178,18 @@ cimport = function(...)
     previous_defines = previous_defines_init
     cdefs = cdefs_init
   end
-  for _, path in ipairs({...}) do
-    if not (path:sub(1, 1) == '/' or path:sub(1, 1) == '.'
-            or path:sub(2, 2) == ':') then
-      path = './' .. path
+  for _, path in ipairs { ... } do
+    if not (path:sub(1, 1) == "/" or path:sub(1, 1) == "." or path:sub(2, 2) == ":") then
+      path = "./" .. path
     end
     if not preprocess_cache[path] then
       local body
       body, previous_defines = Preprocess.preprocess(previous_defines, path)
       -- format it (so that the lines are "unique" statements), also filter out
       -- Objective-C blocks
-      if os.getenv('NVIM_TEST_PRINT_I') == '1' then
+      if os.getenv "NVIM_TEST_PRINT_I" == "1" then
         local lnum = 0
-        for line in body:gmatch('[^\n]+') do
+        for line in body:gmatch "[^\n]+" do
           lnum = lnum + 1
           print(lnum, line)
         end
@@ -194,13 +198,13 @@ cimport = function(...)
       body = filter_complex_blocks(body)
       -- add the formatted lines to a set
       local new_cdefs = Set:new()
-      for line in body:gmatch("[^\r\n]+") do
+      for line in body:gmatch "[^\r\n]+" do
         line = trim(line)
         -- give each #pragma pack an unique id, so that they don't get removed
         -- if they are inserted into the set
         -- (they are needed in the right order with the struct definitions,
         -- otherwise luajit has wrong memory layouts for the sturcts)
-        if line:match("#pragma%s+pack") then
+        if line:match "#pragma%s+pack" then
           line = line .. " // " .. pragma_pack_id
           pragma_pack_id = pragma_pack_id + 1
         end
@@ -214,12 +218,12 @@ cimport = function(...)
       -- request a sorted version of the new lines (same relative order as the
       -- original preprocessed file) and feed that to the LuaJIT ffi
       local new_lines = new_cdefs:to_table()
-      if os.getenv('NVIM_TEST_PRINT_CDEF') == '1' then
+      if os.getenv "NVIM_TEST_PRINT_CDEF" == "1" then
         for lnum, line in ipairs(new_lines) do
           print(lnum, line)
         end
       end
-      body = table.concat(new_lines, '\n')
+      body = table.concat(new_lines, "\n")
 
       preprocess_cache[path] = body
     end
@@ -235,7 +239,7 @@ local cimport_immediate = function(...)
   child_pid = saved_pid
   if not err then
     emsg = tostring(emsg)
-    io.stderr:write(emsg .. '\n')
+    io.stderr:write(emsg .. "\n")
     assert(false)
   else
     return lib
@@ -247,7 +251,7 @@ local function _cimportstr(preprocess_cache, path)
     return lib
   end
   local body = preprocess_cache[path]
-  if body == '' then
+  if body == "" then
     return lib
   end
   cdef(body)
@@ -264,16 +268,16 @@ end
 
 local function alloc_log_new()
   local log = {
-    log={},
-    lib=cimport('./src/nvim/memory.h'),
-    original_functions={},
-    null={['\0:is_null']=true},
+    log = {},
+    lib = cimport "./src/nvim/memory.h",
+    original_functions = {},
+    null = { ["\0:is_null"] = true },
   }
-  local allocator_functions = {'malloc', 'free', 'calloc', 'realloc'}
+  local allocator_functions = { "malloc", "free", "calloc", "realloc" }
   function log:save_original_functions()
     for _, funcname in ipairs(allocator_functions) do
       if not self.original_functions[funcname] then
-        self.original_functions[funcname] = self.lib['mem_' .. funcname]
+        self.original_functions[funcname] = self.lib["mem_" .. funcname]
       end
     end
   end
@@ -282,10 +286,10 @@ local function alloc_log_new()
     for _, k in ipairs(allocator_functions) do
       do
         local kk = k
-        self.lib['mem_' .. k] = function(...)
-          local log_entry = {func=kk, args={...}}
+        self.lib["mem_" .. k] = function(...)
+          local log_entry = { func = kk, args = { ... } }
           self.log[#self.log + 1] = log_entry
-          if kk == 'free' then
+          if kk == "free" then
             self.original_functions[kk](...)
           else
             log_entry.ret = self.original_functions[kk](...)
@@ -296,7 +300,9 @@ local function alloc_log_new()
               log_entry.args[i] = self.null
             end
           end
-          if self.hook then self:hook(log_entry) end
+          if self.hook then
+            self:hook(log_entry)
+          end
           if log_entry.ret then
             return log_entry.ret
           end
@@ -316,24 +322,24 @@ local function alloc_log_new()
     local toremove = {}
     local allocs = {}
     for i, v in ipairs(self.log) do
-      if v.func == 'malloc' or v.func == 'calloc' then
+      if v.func == "malloc" or v.func == "calloc" then
         allocs[tostring(v.ret)] = i
-      elseif v.func == 'realloc' or v.func == 'free' then
+      elseif v.func == "realloc" or v.func == "free" then
         if allocs[tostring(v.args[1])] then
           toremove[#toremove + 1] = allocs[tostring(v.args[1])]
-          if v.func == 'free' then
+          if v.func == "free" then
             toremove[#toremove + 1] = i
           end
         elseif clear_null_frees and v.args[1] == self.null then
           toremove[#toremove + 1] = i
         end
-        if v.func == 'realloc' then
+        if v.func == "realloc" then
           allocs[tostring(v.ret)] = i
         end
       end
     end
     table.sort(toremove)
-    for i = #toremove,1,-1 do
+    for i = #toremove, 1, -1 do
       table.remove(self.log, toremove[i])
     end
   end
@@ -367,7 +373,7 @@ local function internalize(cdata, len)
   return ffi.string(cdata, len)
 end
 
-local cstr = ffi.typeof('char[?]')
+local cstr = ffi.typeof "char[?]"
 local function to_cstr(string)
   return cstr(#string + 1, string)
 end
@@ -388,7 +394,7 @@ elseif syscall ~= nil then
   sc = {
     fork = syscall.fork,
     pipe = function()
-      local ret = {syscall.pipe()}
+      local ret = { syscall.pipe() }
       return ret[3], ret[4]
     end,
     read = function(rd, len)
@@ -404,37 +410,32 @@ elseif syscall ~= nil then
     exit = syscall.exit,
   }
 else
-  cimport_immediate('./test/unit/fixtures/posix.h')
+  cimport_immediate "./test/unit/fixtures/posix.h"
   sc = {
     fork = function()
       return tonumber(ffi.C.fork())
     end,
     pipe = function()
-      local ret = ffi.new('int[2]', {-1, -1})
+      local ret = ffi.new("int[2]", { -1, -1 })
       ffi.errno(0)
       local res = ffi.C.pipe(ret)
-      if (res ~= 0) then
+      if res ~= 0 then
         local err = ffi.errno(0)
-        assert(res == 0, ("pipe() error: %u: %s"):format(
-            err, ffi.string(ffi.C.strerror(err))))
+        assert(res == 0, ("pipe() error: %u: %s"):format(err, ffi.string(ffi.C.strerror(err))))
       end
       assert(ret[0] ~= -1 and ret[1] ~= -1)
       return ret[0], ret[1]
     end,
     read = function(rd, len)
-      local ret = ffi.new('char[?]', len, {0})
+      local ret = ffi.new("char[?]", len, { 0 })
       local total_bytes_read = 0
       ffi.errno(0)
       while total_bytes_read < len do
-        local bytes_read = tonumber(ffi.C.read(
-            rd,
-            ffi.cast('void*', ret + total_bytes_read),
-            len - total_bytes_read))
+        local bytes_read = tonumber(ffi.C.read(rd, ffi.cast("void*", ret + total_bytes_read), len - total_bytes_read))
         if bytes_read == -1 then
           local err = ffi.errno(0)
           if err ~= ffi.C.kPOSIXErrnoEINTR then
-            assert(false, ("read() error: %u: %s"):format(
-                err, ffi.string(ffi.C.strerror(err))))
+            assert(false, ("read() error: %u: %s"):format(err, ffi.string(ffi.C.strerror(err))))
           end
         elseif bytes_read == 0 then
           break
@@ -449,15 +450,13 @@ else
       local total_bytes_written = 0
       ffi.errno(0)
       while total_bytes_written < #s do
-        local bytes_written = tonumber(ffi.C.write(
-            wr,
-            ffi.cast('void*', wbuf + total_bytes_written),
-            #s - total_bytes_written))
+        local bytes_written = tonumber(
+          ffi.C.write(wr, ffi.cast("void*", wbuf + total_bytes_written), #s - total_bytes_written)
+        )
         if bytes_written == -1 then
           local err = ffi.errno(0)
           if err ~= ffi.C.kPOSIXErrnoEINTR then
-            assert(false, ("write() error: %u: %s ('%s')"):format(
-                err, ffi.string(ffi.C.strerror(err)), s))
+            assert(false, ("write() error: %u: %s ('%s')"):format(err, ffi.string(ffi.C.strerror(err)), s))
           end
         elseif bytes_written == 0 then
           break
@@ -477,8 +476,7 @@ else
           if err == ffi.C.kPOSIXErrnoECHILD then
             break
           elseif err ~= ffi.C.kPOSIXErrnoEINTR then
-            assert(false, ("waitpid() error: %u: %s"):format(
-                err, ffi.string(ffi.C.strerror(err))))
+            assert(false, ("waitpid() error: %u: %s"):format(err, ffi.string(ffi.C.strerror(err))))
           end
         else
           assert(r == pid)
@@ -490,21 +488,22 @@ else
 end
 
 local function format_list(lst)
-  local ret = ''
+  local ret = ""
   for _, v in ipairs(lst) do
-    if ret ~= '' then ret = ret .. ', ' end
-    ret = ret .. assert:format({v, n=1})[1]
+    if ret ~= "" then
+      ret = ret .. ", "
+    end
+    ret = ret .. assert:format({ v, n = 1 })[1]
   end
   return ret
 end
 
-if os.getenv('NVIM_TEST_PRINT_SYSCALLS') == '1' then
+if os.getenv "NVIM_TEST_PRINT_SYSCALLS" == "1" then
   for k_, v_ in pairs(sc) do
     (function(k, v)
       sc[k] = function(...)
-        local rets = {v(...)}
-        io.stderr:write(('%s(%s) = %s\n'):format(k, format_list({...}),
-                                                 format_list(rets)))
+        local rets = { v(...) }
+        io.stderr:write(("%s(%s) = %s\n"):format(k, format_list { ... }, format_list(rets)))
         return unpack(rets)
       end
     end)(k_, v_)
@@ -514,18 +513,16 @@ end
 local function just_fail(_)
   return false
 end
-say:set('assertion.just_fail.positive', '%s')
-say:set('assertion.just_fail.negative', '%s')
-assert:register('assertion', 'just_fail', just_fail,
-                'assertion.just_fail.positive',
-                'assertion.just_fail.negative')
+say:set("assertion.just_fail.positive", "%s")
+say:set("assertion.just_fail.negative", "%s")
+assert:register("assertion", "just_fail", just_fail, "assertion.just_fail.positive", "assertion.just_fail.negative")
 
 local hook_fnamelen = 30
 local hook_sfnamelen = 30
 local hook_numlen = 5
 local hook_msglen = 1 + 1 + 1 + (1 + hook_fnamelen) + (1 + hook_sfnamelen) + (1 + hook_numlen) + 1
 
-local tracehelp = dedent([[
+local tracehelp = dedent [[
   Trace: either in the format described below or custom debug output starting
   with `>`. Latter lines still have the same width in byte.
 
@@ -540,11 +537,11 @@ local tracehelp = dedent([[
   │┃│ ┏ Source file name             ┌ Function name                ┏ Line
   │┃│ ┃ (trunc to 30 bytes, no .lua) │ (truncated to last 30 bytes) ┃ number
   CWN SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:LLLLL\n
-]])
+]]
 
 local function child_sethook(wr)
-  local trace_level = os.getenv('NVIM_TEST_TRACE_LEVEL')
-  if not trace_level or trace_level == '' then
+  local trace_level = os.getenv "NVIM_TEST_TRACE_LEVEL"
+  if not trace_level or trace_level == "" then
     trace_level = 0
   else
     trace_level = tonumber(trace_level)
@@ -558,14 +555,14 @@ local function child_sethook(wr)
     local info = nil
     if use_prev then
       info = prev_info
-    elseif reason ~= 'tail return' then  -- tail return
-      info = debug.getinfo(2, 'nSl')
+    elseif reason ~= "tail return" then -- tail return
+      info = debug.getinfo(2, "nSl")
     end
 
-    if trace_only_c and (not info or info.what ~= 'C') and not use_prev then
-      if info.source:sub(-9) == '_spec.lua' then
+    if trace_only_c and (not info or info.what ~= "C") and not use_prev then
+      if info.source:sub(-9) == "_spec.lua" then
         prev_info = info
-        prev_reason = 'saved'
+        prev_reason = "saved"
         prev_lnum = lnum
       end
       return
@@ -575,26 +572,26 @@ local function child_sethook(wr)
       prev_reason = nil
     end
 
-    local whatchar = ' '
-    local namewhatchar = ' '
-    local funcname = ''
-    local source = ''
+    local whatchar = " "
+    local namewhatchar = " "
+    local funcname = ""
+    local source = ""
     local msgchar = reason:sub(1, 1)
 
-    if reason == 'count' then
-      msgchar = 'C'
+    if reason == "count" then
+      msgchar = "C"
     end
 
     if info then
-      funcname = (info.name or ''):sub(1, hook_fnamelen)
+      funcname = (info.name or ""):sub(1, hook_fnamelen)
       whatchar = info.what:sub(1, 1)
       namewhatchar = info.namewhat:sub(1, 1)
-      if namewhatchar == '' then
-        namewhatchar = ' '
+      if namewhatchar == "" then
+        namewhatchar = " "
       end
       source = info.source
-      if source:sub(1, 1) == '@' then
-        if source:sub(-4, -1) == '.lua' then
+      if source:sub(1, 1) == "@" then
+        if source:sub(-4, -1) == ".lua" then
           source = source:sub(1, -5)
         end
         source = source:sub(-hook_sfnamelen, -1)
@@ -605,30 +602,33 @@ local function child_sethook(wr)
     -- assert(-1 <= lnum and lnum <= 99999)
     local lnum_s
     if lnum == -1 then
-      lnum_s = 'nknwn'
+      lnum_s = "nknwn"
     else
-      lnum_s = ('%u'):format(lnum)
+      lnum_s = ("%u"):format(lnum)
     end
-    local msg = (  -- lua does not support %*
-      ''
-      .. msgchar
-      .. whatchar
-      .. namewhatchar
-      .. ' '
-      .. source .. (' '):rep(hook_sfnamelen - #source)
-      .. ':'
-      .. funcname .. (' '):rep(hook_fnamelen - #funcname)
-      .. ':'
-      .. ('0'):rep(hook_numlen - #lnum_s) .. lnum_s
-      .. '\n'
-    )
+    local msg = ( -- lua does not support %*
+        ""
+        .. msgchar
+        .. whatchar
+        .. namewhatchar
+        .. " "
+        .. source
+        .. (" "):rep(hook_sfnamelen - #source)
+        .. ":"
+        .. funcname
+        .. (" "):rep(hook_fnamelen - #funcname)
+        .. ":"
+        .. ("0"):rep(hook_numlen - #lnum_s)
+        .. lnum_s
+        .. "\n"
+      )
     -- eq(hook_msglen, #msg)
     sc.write(wr, msg)
   end
-  debug.sethook(hook, 'crl')
+  debug.sethook(hook, "crl")
 end
 
-local trace_end_msg = ('E%s\n'):format((' '):rep(hook_msglen - 2))
+local trace_end_msg = ("E%s\n"):format((" "):rep(hook_msglen - 2))
 
 local _debug_log
 
@@ -639,11 +639,11 @@ end)
 local function itp_child(wr, func)
   _debug_log = function(s)
     s = s:sub(1, hook_msglen - 2)
-    sc.write(wr, '>' .. s .. (' '):rep(hook_msglen - 2 - #s) .. '\n')
+    sc.write(wr, ">" .. s .. (" "):rep(hook_msglen - 2 - #s) .. "\n")
   end
   local status, result = pcall(init)
   if status then
-    collectgarbage('stop')
+    collectgarbage "stop"
     child_sethook(wr)
     status, result = pcall(func)
     debug.sethook()
@@ -654,15 +654,15 @@ local function itp_child(wr, func)
     if #emsg > 99999 then
       emsg = emsg:sub(1, 99999)
     end
-    sc.write(wr, ('-\n%05u\n%s'):format(#emsg, emsg))
+    sc.write(wr, ("-\n%05u\n%s"):format(#emsg, emsg))
     deinit()
   else
-    sc.write(wr, '+\n')
+    sc.write(wr, "+\n")
     deinit()
   end
-  collectgarbage('restart')
+  collectgarbage "restart"
   collectgarbage()
-  sc.write(wr, '$\n')
+  sc.write(wr, "$\n")
   sc.close(wr)
   sc.exit(status and 0 or 1)
 end
@@ -670,14 +670,14 @@ end
 local function check_child_err(rd)
   local trace = {}
   local did_traceline = false
-  local maxtrace = tonumber(os.getenv('NVIM_TEST_MAXTRACE')) or 1024
+  local maxtrace = tonumber(os.getenv "NVIM_TEST_MAXTRACE") or 1024
   while true do
     local traceline = sc.read(rd, hook_msglen)
     if #traceline ~= hook_msglen then
       if #traceline == 0 then
         break
       else
-        trace[#trace + 1] = 'Partial read: <' .. trace .. '>\n'
+        trace[#trace + 1] = "Partial read: <" .. trace .. ">\n"
       end
     end
     if traceline == trace_end_msg then
@@ -691,14 +691,14 @@ local function check_child_err(rd)
   end
   local res = sc.read(rd, 2)
   if #res == 2 then
-    local err = ''
-    if res ~= '+\n' then
-      eq('-\n', res)
+    local err = ""
+    if res ~= "+\n" then
+      eq("-\n", res)
       local len_s = sc.read(rd, 5)
       local len = tonumber(len_s)
       neq(0, len)
-      if os.getenv('NVIM_TEST_TRACE_ON_ERROR') == '1' and #trace ~= 0 then
-        err = '\nTest failed, trace:\n' .. tracehelp
+      if os.getenv "NVIM_TEST_TRACE_ON_ERROR" == "1" and #trace ~= 0 then
+        err = "\nTest failed, trace:\n" .. tracehelp
         for _, traceline in ipairs(trace) do
           err = err .. traceline
         end
@@ -706,24 +706,24 @@ local function check_child_err(rd)
       err = err .. sc.read(rd, len + 1)
     end
     local eres = sc.read(rd, 2)
-    if eres ~= '$\n' then
+    if eres ~= "$\n" then
       if #trace == 0 then
-        err = '\nTest crashed, no trace available (check NVIM_TEST_TRACE_LEVEL)\n'
+        err = "\nTest crashed, no trace available (check NVIM_TEST_TRACE_LEVEL)\n"
       else
-        err = '\nTest crashed, trace:\n' .. tracehelp
+        err = "\nTest crashed, trace:\n" .. tracehelp
         for i = 1, #trace do
           err = err .. trace[i]
         end
       end
       if not did_traceline then
-        err = err .. '\nNo end of trace occurred'
+        err = err .. "\nNo end of trace occurred"
       end
       local cc_err, cc_emsg = pcall(check_cores, Paths.test_luajit_prg, true)
       if not cc_err then
-        err = err .. '\ncheck_cores failed: ' .. cc_emsg
+        err = err .. "\ncheck_cores failed: " .. cc_emsg
       end
     end
-    if err ~= '' then
+    if err ~= "" then
       assert.just_fail(err)
     end
   end
@@ -735,7 +735,7 @@ local function itp_parent(rd, pid, allow_failure)
   sc.close(rd)
   if not err then
     if allow_failure then
-      io.stderr:write('Errorred out:\n' .. tostring(emsg) .. '\n')
+      io.stderr:write("Errorred out:\n" .. tostring(emsg) .. "\n")
       os.execute([[
         sh -c "source ci/common/test.sh
         check_core_dumps --delete \"]] .. Paths.test_luajit_prg .. [[\""]])
@@ -749,11 +749,13 @@ local function gen_itp(it)
   child_calls_mod = {}
   child_calls_mod_once = {}
   child_cleanups_mod_once = {}
-  preprocess_cache_mod = map(function(v) return v end, preprocess_cache_init)
+  preprocess_cache_mod = map(function(v)
+    return v
+  end, preprocess_cache_init)
   previous_defines_mod = previous_defines_init
   cdefs_mod = cdefs_init:copy()
   local function itp(name, func, allow_failure)
-    if allow_failure and os.getenv('NVIM_TEST_RUN_FAILING_TESTS') ~= '1' then
+    if allow_failure and os.getenv "NVIM_TEST_RUN_FAILING_TESTS" ~= "1" then
       -- FIXME Fix tests with this true
       return
     end
@@ -775,10 +777,10 @@ local function gen_itp(it)
 end
 
 local function cppimport(path)
-  return cimport(Paths.test_source_path .. '/test/includes/pre/' .. path)
+  return cimport(Paths.test_source_path .. "/test/includes/pre/" .. path)
 end
 
-cimport('./src/nvim/types.h', './src/nvim/main.h', './src/nvim/os/time.h')
+cimport("./src/nvim/types.h", "./src/nvim/main.h", "./src/nvim/os/time.h")
 
 local function conv_enum(etab, eval)
   local n = tonumber(eval)
@@ -824,13 +826,13 @@ local function make_enum_conv_tab(m, values, skip_pref, set_cb)
 end
 
 local function ptr2addr(ptr)
-  return tonumber(ffi.cast('intptr_t', ffi.cast('void *', ptr)))
+  return tonumber(ffi.cast("intptr_t", ffi.cast("void *", ptr)))
 end
 
-local s = ffi.new('char[64]', {0})
+local s = ffi.new("char[64]", { 0 })
 
 local function ptr2key(ptr)
-  ffi.C.snprintf(s, ffi.sizeof(s), '%p', ffi.cast('void *', ptr))
+  ffi.C.snprintf(s, ffi.sizeof(s), "%p", ffi.cast("void *", ptr))
   return ffi.string(s)
 end
 
@@ -862,7 +864,7 @@ local module = {
   ptr2key = ptr2key,
   debug_log = debug_log,
 }
-module = global_helpers.tbl_extend('error', module, global_helpers)
+module = global_helpers.tbl_extend("error", module, global_helpers)
 return function()
   return module
 end

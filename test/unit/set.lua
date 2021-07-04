@@ -11,7 +11,7 @@ function Set:new(items)
   setmetatable(obj, self)
   self.__index = self
 
-  if type(items) == 'table' then
+  if type(items) == "table" then
     local tempset = Set:new()
     tempset:union_table(items)
     obj.tbl = tempset:raw_tbl()
@@ -117,7 +117,7 @@ function Set:to_table()
   -- there might be gaps in @tbl, so we have to be careful and sort first
   local keys
   do
-    local _accum_0 = { }
+    local _accum_0 = {}
     local _len_0 = 1
     for idx, _ in pairs(self.tbl) do
       _accum_0[_len_0] = idx
@@ -128,7 +128,7 @@ function Set:to_table()
   table.sort(keys)
   local copy
   do
-    local _accum_0 = { }
+    local _accum_0 = {}
     local _len_0 = 1
     for _index_0 = 1, #keys do
       local idx = keys[_index_0]

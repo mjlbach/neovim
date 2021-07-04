@@ -1,17 +1,17 @@
 -- Test for 'lisp'
 -- If the lisp feature is not enabled, this will fail!
 
-local helpers = require('test.functional.helpers')(after_each)
+local helpers = require "test.functional.helpers"(after_each)
 local clear, feed, insert = helpers.clear, helpers.feed, helpers.insert
 local command, expect = helpers.command, helpers.expect
 local poke_eventloop = helpers.poke_eventloop
 
-describe('lisp indent', function()
+describe("lisp indent", function()
   setup(clear)
 
   -- luacheck: ignore 621 (Indentation)
-  it('is working', function()
-    insert([[
+  it("is working", function()
+    insert [[
       (defun html-file (base)
       (format nil "~(~A~).html" base))
 
@@ -34,20 +34,20 @@ describe('lisp indent', function()
       `(progn
       (format t "<a href=\"~A\">" (html-file ,dest))
       ,@body
-      (princ "</a>")))]])
+      (princ "</a>")))]]
 
-    command('set lisp')
-    command('/^(defun')
-    feed('=G:/^(defun/,$yank A<cr>')
+    command "set lisp"
+    command "/^(defun"
+    feed "=G:/^(defun/,$yank A<cr>"
     poke_eventloop()
 
     -- Put @a and clean empty line
-    command('%d')
-    command('0put a')
-    command('$d')
+    command "%d"
+    command "0put a"
+    command "$d"
 
     -- Assert buffer contents.
-    expect([[
+    expect [[
       (defun html-file (base)
         (format nil "~(~A~).html" base))
 
@@ -70,6 +70,6 @@ describe('lisp indent', function()
         `(progn
            (format t "<a href=\"~A\">" (html-file ,dest))
            ,@body
-           (princ "</a>")))]])
+           (princ "</a>")))]]
   end)
 end)

@@ -1,10 +1,10 @@
-local lfs = require('lfs')
-local helpers = require('test.functional.helpers')(after_each)
+local lfs = require "lfs"
+local helpers = require "test.functional.helpers"(after_each)
 local clear, eq = helpers.clear, helpers.eq
 local eval, command = helpers.eval, helpers.command
 
-describe('autochdir behavior', function()
-  local dir = 'Xtest-functional-legacy-autochdir'
+describe("autochdir behavior", function()
+  local dir = "Xtest-functional-legacy-autochdir"
 
   before_each(function()
     lfs.mkdir(dir)
@@ -16,11 +16,11 @@ describe('autochdir behavior', function()
   end)
 
   -- Tests vim/vim/777 without test_autochdir().
-  it('sets filename', function()
-    command('set acd')
-    command('new')
-    command('w '..dir..'/Xtest')
-    eq('Xtest', eval("expand('%')"))
-    eq(dir, eval([[substitute(getcwd(), '.*[/\\]\(\k*\)', '\1', '')]]))
+  it("sets filename", function()
+    command "set acd"
+    command "new"
+    command("w " .. dir .. "/Xtest")
+    eq("Xtest", eval "expand('%')")
+    eq(dir, eval [[substitute(getcwd(), '.*[/\\]\(\k*\)', '\1', '')]])
   end)
 end)

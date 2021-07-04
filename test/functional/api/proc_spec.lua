@@ -1,4 +1,4 @@
-local helpers = require('test.functional.helpers')(after_each)
+local helpers = require "test.functional.helpers"(after_each)
 
 local clear = helpers.clear
 local eq = helpers.eq
@@ -10,39 +10,39 @@ local request = helpers.request
 local retry = helpers.retry
 local NIL = helpers.NIL
 
-describe('API', function()
+describe("API", function()
   before_each(clear)
 
-  describe('nvim_get_proc_children', function()
-    it('returns child process ids', function()
+  describe("nvim_get_proc_children", function()
+    it("returns child process ids", function()
       local this_pid = funcs.getpid()
 
       -- Might be non-zero already (left-over from some other test?),
       -- but this is not what is tested here.
-      local initial_childs = request('nvim_get_proc_children', this_pid)
+      local initial_childs = request("nvim_get_proc_children", this_pid)
 
       local job1 = funcs.jobstart(nvim_argv)
       retry(nil, nil, function()
-        eq(#initial_childs + 1, #request('nvim_get_proc_children', this_pid))
+        eq(#initial_childs + 1, #request("nvim_get_proc_children", this_pid))
       end)
 
       local job2 = funcs.jobstart(nvim_argv)
       retry(nil, nil, function()
-        eq(#initial_childs + 2, #request('nvim_get_proc_children', this_pid))
+        eq(#initial_childs + 2, #request("nvim_get_proc_children", this_pid))
       end)
 
       funcs.jobstop(job1)
       retry(nil, nil, function()
-        eq(#initial_childs + 1, #request('nvim_get_proc_children', this_pid))
+        eq(#initial_childs + 1, #request("nvim_get_proc_children", this_pid))
       end)
 
       funcs.jobstop(job2)
       retry(nil, nil, function()
-        eq(#initial_childs, #request('nvim_get_proc_children', this_pid))
+        eq(#initial_childs, #request("nvim_get_proc_children", this_pid))
       end)
     end)
 
-    it('validates input', function()
+    it("validates input", function()
       local status, rv = pcall(request, "nvim_get_proc_children", -1)
       eq(false, status)
       eq("Invalid pid: -1", string.match(rv, "Invalid.*"))
@@ -58,17 +58,17 @@ describe('API', function()
     end)
   end)
 
-  describe('nvim_get_proc', function()
-    it('returns process info', function()
+  describe("nvim_get_proc", function()
+    it("returns process info", function()
       local pid = funcs.getpid()
-      local pinfo = request('nvim_get_proc', pid)
-      eq((iswin() and 'nvim.exe' or 'nvim'), pinfo.name)
+      local pinfo = request("nvim_get_proc", pid)
+      eq((iswin() and "nvim.exe" or "nvim"), pinfo.name)
       eq(pinfo.pid, pid)
-      eq(type(pinfo.ppid), 'number')
+      eq(type(pinfo.ppid), "number")
       neq(pinfo.ppid, pid)
     end)
 
-    it('validates input', function()
+    it("validates input", function()
       local status, rv = pcall(request, "nvim_get_proc", -1)
       eq(false, status)
       eq("Invalid pid: -1", string.match(rv, "Invalid.*"))

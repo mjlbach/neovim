@@ -8,5 +8,5 @@
 local lua_version = _VERSION:sub(-3)
 
 if lua_version >= "5.2" then
-  unpack = table.unpack  -- luacheck: ignore 121 143
+  unpack = table.unpack -- luacheck: ignore 121 143
 end

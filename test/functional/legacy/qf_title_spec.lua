@@ -1,17 +1,17 @@
 -- Tests for quickfix window's title
 
-local helpers = require('test.functional.helpers')(after_each)
+local helpers = require "test.functional.helpers"(after_each)
 local insert, source = helpers.insert, helpers.source
 local clear, expect = helpers.clear, helpers.expect
 
-describe('qf_title', function()
+describe("qf_title", function()
   setup(clear)
 
-  it('is working', function()
-    insert([[
-      Results of test_qf_title:]])
+  it("is working", function()
+    insert [[
+      Results of test_qf_title:]]
 
-    source([[
+    source [[
       set efm=%E%f:%l:%c:%m
       cgetexpr ['file:1:1:message']
       let qflist=getqflist()
@@ -20,11 +20,11 @@ describe('qf_title', function()
       let g:quickfix_title=w:quickfix_title
       wincmd p
       $put =g:quickfix_title
-    ]])
+    ]]
 
     -- Assert buffer contents.
-    expect([[
+    expect [[
       Results of test_qf_title:
-      :setqflist()]])
+      :setqflist()]]
   end)
 end)

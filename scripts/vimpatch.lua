@@ -6,21 +6,21 @@
 local nvim = vim.api
 
 local function pprint(o)
-  print(nvim.nvim_call_function('string', { o }))
+  print(nvim.nvim_call_function("string", { o }))
 end
 
 local function systemlist(...)
-  local rv = nvim.nvim_call_function('systemlist', ...)
-  local err = nvim.nvim_get_vvar('shell_error')
-  local args_str = nvim.nvim_call_function('string', ...)
+  local rv = nvim.nvim_call_function("systemlist", ...)
+  local err = nvim.nvim_get_vvar "shell_error"
+  local args_str = nvim.nvim_call_function("string", ...)
   if 0 ~= err then
-    error('command failed: '..args_str)
+    error("command failed: " .. args_str)
   end
   return rv
 end
 
 local function vimpatch_sh_list_numbers()
-  return systemlist( { { 'bash', '-c', 'scripts/vim-patch.sh -M', } } )
+  return systemlist { { "bash", "-c", "scripts/vim-patch.sh -M" } }
 end
 
 -- Generates the lines to be inserted into the src/version.c
@@ -40,9 +40,9 @@ local function gen_version_c_lines()
   for i = highest, 0, -1 do
     local is_merged = (nil ~= merged_patch_numbers[i])
     if is_merged then
-      table.insert(lines, string.format('  %s,', i))
+      table.insert(lines, string.format("  %s,", i))
     else
-      table.insert(lines, string.format('  // %s,', i))
+      table.insert(lines, string.format("  // %s,", i))
     end
   end
 
@@ -52,16 +52,16 @@ end
 local function patch_version_c()
   local lines = gen_version_c_lines()
 
-  nvim.nvim_command('silent noswapfile noautocmd edit src/nvim/version.c')
-  nvim.nvim_command('/static const int included_patches')
+  nvim.nvim_command "silent noswapfile noautocmd edit src/nvim/version.c"
+  nvim.nvim_command "/static const int included_patches"
   -- Delete the existing lines.
-  nvim.nvim_command('silent normal! j0d/};\rk')
+  nvim.nvim_command "silent normal! j0d/};\rk"
   -- Insert the lines.
-  nvim.nvim_call_function('append', {
-      nvim.nvim_eval('line(".")'),
-      lines,
-    })
-  nvim.nvim_command('silent write')
+  nvim.nvim_call_function("append", {
+    nvim.nvim_eval 'line(".")',
+    lines,
+  })
+  nvim.nvim_command "silent write"
 end
 
 patch_version_c()

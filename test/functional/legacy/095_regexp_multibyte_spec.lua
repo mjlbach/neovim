@@ -3,18 +3,18 @@
 -- A pattern that gives the expected result produces OK, so that we know it was
 -- actually tried.
 
-local helpers = require('test.functional.helpers')(after_each)
+local helpers = require "test.functional.helpers"(after_each)
 local insert, source = helpers.insert, helpers.source
 local clear, expect = helpers.clear, helpers.expect
 
-describe('regex with multi-byte', function()
+describe("regex with multi-byte", function()
   setup(clear)
 
-  it('is working', function()
-    insert([[
-      Results of test95:]])
+  it("is working", function()
+    insert [[
+      Results of test95:]]
 
-    source([=[
+    source [=[
       set nomore
       let tl = []
 
@@ -122,10 +122,10 @@ describe('regex with multi-byte', function()
 
       set regexpengine=2 ambiwidth=double
       $put ='eng 2 ambi double: ' . match(\"\u00EC\", '\p')
-    ]=])
+    ]=]
 
     -- Assert buffer contents.
-    expect([=[
+    expect [=[
       Results of test95:
       OK 0 - [[:alpha:][=a=]]\+
       OK 1 - [[:alpha:][=a=]]\+
@@ -265,6 +265,6 @@ describe('regex with multi-byte', function()
       eng 1 ambi single: 0
       eng 1 ambi double: 0
       eng 2 ambi single: 0
-      eng 2 ambi double: 0]=])
+      eng 2 ambi double: 0]=]
   end)
 end)

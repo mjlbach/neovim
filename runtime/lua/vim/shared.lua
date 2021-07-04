@@ -14,7 +14,7 @@ local vim = vim or {}
 ---
 --@param orig Table to copy
 --@returns New table of copied keys and (nested) values.
-function vim.deepcopy(orig) end  -- luacheck: no unused
+function vim.deepcopy(orig) end -- luacheck: no unused
 vim.deepcopy = (function()
   local function _id(v)
     return v
@@ -35,9 +35,9 @@ vim.deepcopy = (function()
     end,
     number = _id,
     string = _id,
-    ['nil'] = _id,
+    ["nil"] = _id,
     boolean = _id,
-    ['function'] = _id,
+    ["function"] = _id,
   }
 
   return function(orig)
@@ -45,7 +45,7 @@ vim.deepcopy = (function()
     if f then
       return f(orig)
     else
-      error("Cannot deepcopy object of type "..type(orig))
+      error("Cannot deepcopy object of type " .. type(orig))
     end
   end
 end)()
@@ -61,14 +61,14 @@ end)()
 --@param plain If `true` use `sep` literally (passed to String.find)
 --@returns Iterator over the split components
 function vim.gsplit(s, sep, plain)
-  vim.validate{s={s,'s'},sep={sep,'s'},plain={plain,'b',true}}
+  vim.validate { s = { s, "s" }, sep = { sep, "s" }, plain = { plain, "b", true } }
 
   local start = 1
   local done = false
 
   local function _pass(i, j, ...)
     if i then
-      assert(j+1 > start, "Infinite loop detected")
+      assert(j + 1 > start, "Infinite loop detected")
       local seg = s:sub(start, i - 1)
       start = j + 1
       return seg, ...
@@ -79,14 +79,14 @@ function vim.gsplit(s, sep, plain)
   end
 
   return function()
-    if done or (s == '' and sep == '') then
+    if done or (s == "" and sep == "") then
       return
     end
-    if sep == '' then
+    if sep == "" then
       if start == #s then
         done = true
       end
-      return _pass(start+1, start)
+      return _pass(start + 1, start)
     end
     return _pass(s:find(sep, start, plain))
   end
@@ -107,8 +107,11 @@ end
 --@param sep Separator string or pattern
 --@param plain If `true` use `sep` literally (passed to String.find)
 --@returns List-like table of the split components.
-function vim.split(s,sep,plain)
-  local t={} for c in vim.gsplit(s, sep, plain) do table.insert(t,c) end
+function vim.split(s, sep, plain)
+  local t = {}
+  for c in vim.gsplit(s, sep, plain) do
+    table.insert(t, c)
+  end
   return t
 end
 
@@ -120,7 +123,7 @@ end
 --@param t Table
 --@returns list of keys
 function vim.tbl_keys(t)
-  assert(type(t) == 'table', string.format("Expected table, got %s", type(t)))
+  assert(type(t) == "table", string.format("Expected table, got %s", type(t)))
 
   local keys = {}
   for k, _ in pairs(t) do
@@ -135,7 +138,7 @@ end
 --@param t Table
 --@returns list of values
 function vim.tbl_values(t)
-  assert(type(t) == 'table', string.format("Expected table, got %s", type(t)))
+  assert(type(t) == "table", string.format("Expected table, got %s", type(t)))
 
   local values = {}
   for _, v in pairs(t) do
@@ -149,7 +152,7 @@ end
 --@param func function or callable table
 --@param t table
 function vim.tbl_map(func, t)
-  vim.validate{func={func,'c'},t={t,'t'}}
+  vim.validate { func = { func, "c" }, t = { t, "t" } }
 
   local rettab = {}
   for k, v in pairs(t) do
@@ -163,7 +166,7 @@ end
 --@param func function or callable table
 --@param t table
 function vim.tbl_filter(func, t)
-  vim.validate{func={func,'c'},t={t,'t'}}
+  vim.validate { func = { func, "c" }, t = { t, "t" } }
 
   local rettab = {}
   for _, entry in pairs(t) do
@@ -180,9 +183,9 @@ end
 --@param value Value to compare
 --@returns true if `t` contains `value`
 function vim.tbl_contains(t, value)
-  vim.validate{t={t,'t'}}
+  vim.validate { t = { t, "t" } }
 
-  for _,v in ipairs(t) do
+  for _, v in ipairs(t) do
     if v == value then
       return true
     end
@@ -196,17 +199,17 @@ end
 ---
 --@param t Table to check
 function vim.tbl_isempty(t)
-  assert(type(t) == 'table', string.format("Expected table, got %s", type(t)))
+  assert(type(t) == "table", string.format("Expected table, got %s", type(t)))
   return next(t) == nil
 end
 
 local function tbl_extend(behavior, deep_extend, ...)
-  if (behavior ~= 'error' and behavior ~= 'keep' and behavior ~= 'force') then
-    error('invalid "behavior": '..tostring(behavior))
+  if behavior ~= "error" and behavior ~= "keep" and behavior ~= "force" then
+    error('invalid "behavior": ' .. tostring(behavior))
   end
 
-  if select('#', ...) < 2 then
-    error('wrong number of arguments (given '..tostring(1 + select('#', ...))..', expected at least 3)')
+  if select("#", ...) < 2 then
+    error("wrong number of arguments (given " .. tostring(1 + select("#", ...)) .. ", expected at least 3)")
   end
 
   local ret = {}
@@ -214,17 +217,17 @@ local function tbl_extend(behavior, deep_extend, ...)
     ret = vim.empty_dict()
   end
 
-  for i = 1, select('#', ...) do
+  for i = 1, select("#", ...) do
     local tbl = select(i, ...)
-    vim.validate{["after the second argument"] = {tbl,'t'}}
+    vim.validate { ["after the second argument"] = { tbl, "t" } }
     if tbl then
       for k, v in pairs(tbl) do
-        if type(v) == 'table' and deep_extend and not vim.tbl_islist(v) then
+        if type(v) == "table" and deep_extend and not vim.tbl_islist(v) then
           ret[k] = tbl_extend(behavior, true, ret[k] or vim.empty_dict(), v)
-        elseif behavior ~= 'force' and ret[k] ~= nil then
-          if behavior == 'error' then
-            error('key found in more than one map: '..k)
-          end  -- Else behavior is "keep".
+        elseif behavior ~= "force" and ret[k] ~= nil then
+          if behavior == "error" then
+            error("key found in more than one map: " .. k)
+          end -- Else behavior is "keep".
         else
           ret[k] = v
         end
@@ -262,9 +265,13 @@ end
 
 --- Deep compare values for equality
 function vim.deep_equal(a, b)
-  if a == b then return true end
-  if type(a) ~= type(b) then return false end
-  if type(a) == 'table' then
+  if a == b then
+    return true
+  end
+  if type(a) ~= type(b) then
+    return false
+  end
+  if type(a) == "table" then
     -- TODO improve this algorithm's performance.
     for k, v in pairs(a) do
       if not vim.deep_equal(v, b[k]) then
@@ -292,7 +299,13 @@ function vim.tbl_add_reverse_lookup(o)
   for _, k in ipairs(keys) do
     local v = o[k]
     if o[v] then
-      error(string.format("The reverse lookup found an existing value for %q while processing key %q", tostring(v), tostring(k)))
+      error(
+        string.format(
+          "The reverse lookup found an existing value for %q while processing key %q",
+          tostring(v),
+          tostring(k)
+        )
+      )
     end
     o[v] = k
   end
@@ -312,10 +325,10 @@ end
 --@returns dst
 function vim.list_extend(dst, src, start, finish)
   vim.validate {
-    dst = {dst, 't'};
-    src = {src, 't'};
-    start = {start, 'n', true};
-    finish = {finish, 'n', true};
+    dst = { dst, "t" },
+    src = { src, "t" },
+    start = { start, "n", true },
+    finish = { finish, "n", true },
   }
   for i = start or 1, finish or #src do
     table.insert(dst, src[i])
@@ -356,7 +369,7 @@ end
 --@param t Table
 --@returns `true` if array-like table, else `false`.
 function vim.tbl_islist(t)
-  if type(t) ~= 'table' then
+  if type(t) ~= "table" then
     return false
   end
 
@@ -393,10 +406,12 @@ end
 --@param t Table
 --@returns Number that is the number of the value in table
 function vim.tbl_count(t)
-  vim.validate{t={t,'t'}}
+  vim.validate { t = { t, "t" } }
 
   local count = 0
-  for _ in pairs(t) do count = count + 1 end
+  for _ in pairs(t) do
+    count = count + 1
+  end
   return count
 end
 
@@ -409,7 +424,7 @@ end
 function vim.list_slice(list, start, finish)
   local new_list = {}
   for i = start or 1, finish or #list do
-    new_list[#new_list+1] = list[i]
+    new_list[#new_list + 1] = list[i]
   end
   return new_list
 end
@@ -420,8 +435,8 @@ end
 --@param s String to trim
 --@returns String with whitespace removed from its beginning and end
 function vim.trim(s)
-  vim.validate{s={s,'s'}}
-  return s:match('^%s*(.*%S)') or ''
+  vim.validate { s = { s, "s" } }
+  return s:match "^%s*(.*%S)" or ""
 end
 
 --- Escapes magic chars in a Lua pattern.
@@ -430,8 +445,8 @@ end
 --@param s  String to escape
 --@returns  %-escaped pattern string
 function vim.pesc(s)
-  vim.validate{s={s,'s'}}
-  return s:gsub('[%(%)%.%%%+%-%*%?%[%]%^%$]', '%%%1')
+  vim.validate { s = { s, "s" } }
+  return s:gsub("[%(%)%.%%%+%-%*%?%[%]%^%$]", "%%%1")
 end
 
 --- Tests if `s` starts with `prefix`.
@@ -440,7 +455,7 @@ end
 --@param prefix (string) a prefix
 --@return (boolean) true if `prefix` is a prefix of s
 function vim.startswith(s, prefix)
-  vim.validate { s = {s, 's'}; prefix = {prefix, 's'}; }
+  vim.validate { s = { s, "s" }, prefix = { prefix, "s" } }
   return s:sub(1, #prefix) == prefix
 end
 
@@ -450,7 +465,7 @@ end
 --@param suffix (string) a suffix
 --@return (boolean) true if `suffix` is a suffix of s
 function vim.endswith(s, suffix)
-  vim.validate { s = {s, 's'}; suffix = {suffix, 's'}; }
+  vim.validate { s = { s, "s" }, suffix = { suffix, "s" } }
   return #suffix == 0 or s:sub(-#suffix) == suffix
 end
 
@@ -494,43 +509,49 @@ end
 ---               only if the argument is valid. Can optionally return an additional
 ---               informative error message as the second returned value.
 ---             - msg: (optional) error string if validation fails
-function vim.validate(opt) end  -- luacheck: no unused
+function vim.validate(opt) end -- luacheck: no unused
 
 do
   local type_names = {
-    ['table']    = 'table',    t = 'table',
-    ['string']   = 'string',   s = 'string',
-    ['number']   = 'number',   n = 'number',
-    ['boolean']  = 'boolean',  b = 'boolean',
-    ['function'] = 'function', f = 'function',
-    ['callable'] = 'callable', c = 'callable',
-    ['nil']      = 'nil',
-    ['thread']   = 'thread',
-    ['userdata'] = 'userdata',
+    ["table"] = "table",
+    t = "table",
+    ["string"] = "string",
+    s = "string",
+    ["number"] = "number",
+    n = "number",
+    ["boolean"] = "boolean",
+    b = "boolean",
+    ["function"] = "function",
+    f = "function",
+    ["callable"] = "callable",
+    c = "callable",
+    ["nil"] = "nil",
+    ["thread"] = "thread",
+    ["userdata"] = "userdata",
   }
 
   local function _is_type(val, t)
-    return type(val) == t or (t == 'callable' and vim.is_callable(val))
+    return type(val) == t or (t == "callable" and vim.is_callable(val))
   end
 
   local function is_valid(opt)
-    if type(opt) ~= 'table' then
-      return false, string.format('opt: expected table, got %s', type(opt))
+    if type(opt) ~= "table" then
+      return false, string.format("opt: expected table, got %s", type(opt))
     end
 
     for param_name, spec in pairs(opt) do
-      if type(spec) ~= 'table' then
-        return false, string.format('opt[%s]: expected table, got %s', param_name, type(spec))
+      if type(spec) ~= "table" then
+        return false, string.format("opt[%s]: expected table, got %s", param_name, type(spec))
       end
 
-      local val = spec[1]   -- Argument value.
-      local t = spec[2]     -- Type name, or callable.
+      local val = spec[1] -- Argument value.
+      local t = spec[2] -- Type name, or callable.
       local optional = (true == spec[3])
 
-      if type(t) == 'string' then
+      if type(t) == "string" then
         local t_name = type_names[t]
         if not t_name then
-          return false, string.format('invalid type name: %s', t)
+          return false, string.format("invalid type name: %s", t)
         end
 
         if (not optional or val ~= nil) and not _is_type(val, t_name) then
@@ -540,7 +561,7 @@ do
         -- Check user-provided validation function.
         local valid, optional_message = t(val)
         if not valid then
-          local error_message = string.format("%s: expected %s, got %s", param_name, (spec[3] or '?'), val)
+          local error_message = string.format("%s: expected %s, got %s", param_name, (spec[3] or "?"), val)
           if optional_message ~= nil then
             error_message = error_message .. string.format(". Info: %s", optional_message)
           end
@@ -567,10 +588,14 @@ end
 --@param f Any object
 --@return true if `f` is callable, else false
 function vim.is_callable(f)
-  if type(f) == 'function' then return true end
+  if type(f) == "function" then
+    return true
+  end
   local m = getmetatable(f)
-  if m == nil then return false end
-  return type(m.__call) == 'function'
+  if m == nil then
+    return false
+  end
+  return type(m.__call) == "function"
 end
 
 return vim

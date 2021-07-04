@@ -1,9 +1,9 @@
-local helpers = require('test.functional.helpers')(nil)
+local helpers = require "test.functional.helpers"(nil)
 local meths = helpers.meths
 local write_file = helpers.write_file
 local concat_tables = helpers.concat_tables
 
-local mpack = require('mpack')
+local mpack = require "mpack"
 
 local tmpname = helpers.tmpname()
 
@@ -13,23 +13,24 @@ local tmpname = helpers.tmpname()
 --     shadafile=…,
 --   }
 local function reset(o)
-  assert(o == nil or type(o) == 'table' or type(o) == 'string')
+  assert(o == nil or type(o) == "table" or type(o) == "string")
   o = o and o or {}
   local args_rm = o.args_rm or {}
-  table.insert(args_rm, '-i')
-  local args={
-    '-i', o.shadafile or tmpname,
+  table.insert(args_rm, "-i")
+  local args = {
+    "-i",
+    o.shadafile or tmpname,
   }
-  if type(o) == 'string' then
-    args = concat_tables(args, {'--cmd', o})
+  if type(o) == "string" then
+    args = concat_tables(args, { "--cmd", o })
   elseif o.args then
     args = concat_tables(args, o.args)
   end
-  helpers.clear{
-    args_rm=args_rm,
-    args=args,
+  helpers.clear {
+    args_rm = args_rm,
+    args = args,
   }
-  meths.set_var('tmpname', tmpname)
+  meths.set_var("tmpname", tmpname)
 end
 
 local clear = function()
@@ -41,13 +42,13 @@ local get_shada_rw = function(fname)
     write_file(fname, text, true)
   end
   local sdrcmd = function(bang)
-    return 'rshada' .. (bang and '!' or '') .. ' ' .. fname
+    return "rshada" .. (bang and "!" or "") .. " " .. fname
   end
   local clean = function()
     os.remove(fname)
-    local i = ('a'):byte()
-    while i <= ('z'):byte() do
-      if not os.remove(fname .. ('.tmp.%c'):format(i)) then
+    local i = ("a"):byte()
+    while i <= ("z"):byte() do
+      if not os.remove(fname .. (".tmp.%c"):format(i)) then
         break
       end
       i = i + 1
@@ -56,11 +57,11 @@ local get_shada_rw = function(fname)
   return wshada, sdrcmd, fname, clean
 end
 
-local mpack_keys = {'type', 'timestamp', 'length', 'value'}
+local mpack_keys = { "type", "timestamp", "length", "value" }
 
 local read_shada_file = function(fname)
-  local fd = io.open(fname, 'r')
-  local mstring = fd:read('*a')
+  local fd = io.open(fname, "r")
+  local mstring = fd:read "*a"
   fd:close()
   local unpack = mpack.Unpacker()
   local ret = {}
@@ -80,8 +81,8 @@ local read_shada_file = function(fname)
 end
 
 return {
-  reset=reset,
-  clear=clear,
-  get_shada_rw=get_shada_rw,
-  read_shada_file=read_shada_file,
+  reset = reset,
+  clear = clear,
+  get_shada_rw = get_shada_rw,
+  read_shada_file = read_shada_file,
 }

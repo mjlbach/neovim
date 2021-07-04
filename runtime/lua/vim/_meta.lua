@@ -5,20 +5,28 @@ local a = vim.api
 local validate = vim.validate
 
 local SET_TYPES = setmetatable({
-  SET    = 0,
-  LOCAL  = 1,
+  SET = 0,
+  LOCAL = 1,
   GLOBAL = 2,
 }, { __index = error })
 
 local options_info = {}
 for _, v in pairs(a.nvim_get_all_options_info()) do
   options_info[v.name] = v
-  if v.shortname ~= "" then options_info[v.shortname] = v end
+  if v.shortname ~= "" then
+    options_info[v.shortname] = v
+  end
 end
 
-local is_global_option = function(info) return info.scope == "global" end
-local is_buffer_option = function(info) return info.scope == "buf" end
-local is_window_option = function(info) return info.scope == "win" end
+local is_global_option = function(info)
+  return info.scope == "global"
+end
+local is_buffer_option = function(info)
+  return info.scope == "buf"
+end
+local is_window_option = function(info)
+  return info.scope == "win"
+end
 
 local get_scoped_options = function(scope)
   local result = {}
@@ -31,18 +39,20 @@ local get_scoped_options = function(scope)
   return result
 end
 
-local buf_options = get_scoped_options("buf")
-local glb_options = get_scoped_options("global")
-local win_options = get_scoped_options("win")
+local buf_options = get_scoped_options "buf"
+local glb_options = get_scoped_options "global"
+local win_options = get_scoped_options "win"
 
 local function make_meta_accessor(get, set, del, validator)
-  validator = validator or function() return true end
+  validator = validator or function()
+    return true
+  end
 
   validate {
-    get = {get, 'f'};
-    set = {set, 'f'};
-    del = {del, 'f', true};
-    validator = {validator, 'f'};
+    get = { get, "f" },
+    set = { set, "f" },
+    del = { del, "f", true },
+    validator = { validator, "f" },
   }
 
   local mt = {}
@@ -89,7 +99,7 @@ do -- buffer option accessor
     end
 
     return make_meta_accessor(get, set, nil, function(k)
-      if type(k) == 'string' then
+      if type(k) == "string" then
         if win_options[k] then
           error(string.format([['%s' is a window option, not a buffer option. See ":help %s"]], k, k))
         elseif glb_options[k] then
@@ -118,7 +128,7 @@ do -- window option accessor
     end
 
     return make_meta_accessor(get, set, nil, function(k)
-      if type(k) == 'string' then
+      if type(k) == "string" then
         if buf_options[k] then
           error(string.format([['%s' is a buffer option, not a window option. See ":help %s"]], k, k))
         elseif glb_options[k] then
@@ -175,8 +185,7 @@ local function set_scoped_option(k, v, set_type)
       a.nvim_win_set_option(0, k, v)
     end
   elseif is_buffer_option(info) then
-    if set_type == SET_TYPES.LOCAL
-        or (set_type == SET_TYPES.SET and not info.global_local) then
+    if set_type == SET_TYPES.LOCAL or (set_type == SET_TYPES.SET and not info.global_local) then
       a.nvim_buf_set_option(0, k, v)
     end
   end
@@ -199,7 +208,9 @@ local function get_scoped_option(k, set_type)
 
   if is_buffer_option(info) then
     local was_set, value = pcall(a.nvim_buf_get_option, 0, k)
-    if was_set then return value end
+    if was_set then
+      return value
+    end
 
     if info.global_local then
       return a.nvim_get_option(k)
@@ -211,7 +222,9 @@ local function get_scoped_option(k, set_type)
   if is_window_option(info) then
     if vim.api.nvim_get_option_info(k).was_set then
       local was_set, value = pcall(a.nvim_win_get_option, 0, k)
-      if was_set then return value end
+      if was_set then
+        return value
+      end
     end
 
     return a.nvim_get_option(k)
@@ -226,10 +239,11 @@ vim.go = make_meta_accessor(a.nvim_get_option, a.nvim_set_option)
 
 -- vim `set` style options.
 --  it has no additional metamethod magic.
-vim.o = make_meta_accessor(
-  function(k) return get_scoped_option(k, SET_TYPES.SET) end,
-  function(k, v) return set_scoped_option(k, v, SET_TYPES.SET) end
-)
+vim.o = make_meta_accessor(function(k)
+  return get_scoped_option(k, SET_TYPES.SET)
+end, function(k, v)
+  return set_scoped_option(k, v, SET_TYPES.SET)
+end)
 
 ---@brief [[
 --- vim.opt, vim.opt_local and vim.opt_global implementation
@@ -242,7 +256,9 @@ vim.o = make_meta_accessor(
 --- Preserves the order and does not mutate the original list
 local remove_duplicate_values = function(t)
   local result, seen = {}, {}
-  if type(t) == "function" then error(debug.traceback("asdf")) end
+  if type(t) == "function" then
+    error(debug.traceback "asdf")
+  end
   for _, v in ipairs(t) do
     if not seen[v] then
       table.insert(result, v)
@@ -259,21 +275,25 @@ end
 local key_value_options = {
   fillchars = true,
   listchars = true,
-  winhl     = true,
+  winhl = true,
 }
 
 ---@class OptionType
 --- Option Type Enum
 local OptionTypes = setmetatable({
   BOOLEAN = 0,
-  NUMBER  = 1,
-  STRING  = 2,
-  ARRAY   = 3,
-  MAP     = 4,
-  SET     = 5,
+  NUMBER = 1,
+  STRING = 2,
+  ARRAY = 3,
+  MAP = 4,
+  SET = 5,
 }, {
-  __index = function(_, k) error("Not a valid OptionType: " .. k) end,
-  __newindex = function(_, k) error("Cannot set a new OptionType: " .. k) end,
+  __index = function(_, k)
+    error("Not a valid OptionType: " .. k)
+  end,
+  __newindex = function(_, k)
+    error("Cannot set a new OptionType: " .. k)
+  end,
 })
 
 --- Convert a vimoption_T style dictionary to the correct OptionType associated with it.
@@ -299,25 +319,32 @@ local get_option_type = function(name, info)
       return OptionTypes.ARRAY
     end
 
-    error("Fallthrough in OptionTypes")
+    error "Fallthrough in OptionTypes"
   else
     error("Not a known info.type:" .. info.type)
   end
 end
-
 
 --- Convert a lua value to a vimoption_T value
 local convert_value_to_vim = (function()
   -- Map of functions to take a Lua style value and convert to vimoption_T style value.
   -- Each function takes (info, lua_value) -> vim_value
   local to_vim_value = {
-    [OptionTypes.BOOLEAN] = function(_, value) return value end,
-    [OptionTypes.NUMBER] = function(_, value) return value end,
-    [OptionTypes.STRING] = function(_, value) return value end,
+    [OptionTypes.BOOLEAN] = function(_, value)
+      return value
+    end,
+    [OptionTypes.NUMBER] = function(_, value)
+      return value
+    end,
+    [OptionTypes.STRING] = function(_, value)
+      return value
+    end,
 
     [OptionTypes.SET] = function(_, value)
-      if type(value) == "string" then return value end
-      local result = ''
+      if type(value) == "string" then
+        return value
+      end
+      local result = ""
       for k in pairs(value) do
         result = result .. k
       end
@@ -326,13 +353,19 @@ local convert_value_to_vim = (function()
     end,
 
     [OptionTypes.ARRAY] = function(_, value)
-      if type(value) == "string" then return value end
+      if type(value) == "string" then
+        return value
+      end
       return table.concat(remove_duplicate_values(value), ",")
     end,
 
     [OptionTypes.MAP] = function(_, value)
-      if type(value) == "string" then return value end
-      if type(value) == "function" then error(debug.traceback("asdf")) end
+      if type(value) == "string" then
+        return value
+      end
+      if type(value) == "function" then
+        error(debug.traceback "asdf")
+      end
 
       local result = {}
       for opt_key, opt_value in pairs(value) do
@@ -354,9 +387,15 @@ local convert_value_to_lua = (function()
   -- Map of OptionType to functions that take vimoption_T values and conver to lua values.
   -- Each function takes (info, vim_value) -> lua_value
   local to_lua_value = {
-    [OptionTypes.BOOLEAN] = function(_, value) return value end,
-    [OptionTypes.NUMBER] = function(_, value) return value end,
-    [OptionTypes.STRING] = function(_, value) return value end,
+    [OptionTypes.BOOLEAN] = function(_, value)
+      return value
+    end,
+    [OptionTypes.NUMBER] = function(_, value)
+      return value
+    end,
+    [OptionTypes.STRING] = function(_, value)
+      return value
+    end,
 
     [OptionTypes.ARRAY] = function(_, value)
       if type(value) == "table" then
@@ -368,7 +407,9 @@ local convert_value_to_lua = (function()
     end,
 
     [OptionTypes.SET] = function(info, value)
-      if type(value) == "table" then return value end
+      if type(value) == "table" then
+        return value
+      end
 
       assert(info.flaglist, "That is the only one I know how to handle")
 
@@ -381,7 +422,9 @@ local convert_value_to_lua = (function()
     end,
 
     [OptionTypes.MAP] = function(info, raw_value)
-      if type(raw_value) == "table" then return raw_value end
+      if type(raw_value) == "table" then
+        return raw_value
+      end
 
       assert(info.commalist, "Only commas are supported currently")
 
@@ -414,7 +457,7 @@ end
 local prepend_value = (function()
   local methods = {
     [OptionTypes.NUMBER] = function()
-      error("The '^' operator is not currently supported for")
+      error "The '^' operator is not currently supported for"
     end,
 
     [OptionTypes.STRING] = function(left, right)
@@ -440,7 +483,11 @@ local prepend_value = (function()
 
   return function(name, info, current, new)
     return value_mutator(
-      name, info, convert_value_to_lua(name, info, current), convert_value_to_lua(name, info, new), methods
+      name,
+      info,
+      convert_value_to_lua(name, info, current),
+      convert_value_to_lua(name, info, new),
+      methods
     )
   end
 end)()
@@ -475,7 +522,11 @@ local add_value = (function()
 
   return function(name, info, current, new)
     return value_mutator(
-      name, info, convert_value_to_lua(name, info, current), convert_value_to_lua(name, info, new), methods
+      name,
+      info,
+      convert_value_to_lua(name, info, current),
+      convert_value_to_lua(name, info, new),
+      methods
     )
   end
 end)()
@@ -505,7 +556,7 @@ local remove_value = (function()
     end,
 
     [OptionTypes.STRING] = function()
-      error("Subtraction not supported for strings.")
+      error "Subtraction not supported for strings."
     end,
 
     [OptionTypes.ARRAY] = function(left, right)
@@ -608,7 +659,7 @@ local create_option_metatable = function(set_type)
 
     __sub = function(self, right)
       return make_option(self._name, remove_value(self._name, self._info, self._value, right))
-    end
+    end,
   }
   option_mt.__index = option_mt
 

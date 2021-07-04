@@ -1,17 +1,17 @@
 -- Test for :execute, :while and :if
 
-local helpers = require('test.functional.helpers')(after_each)
+local helpers = require "test.functional.helpers"(after_each)
 
 local clear = helpers.clear
 local expect = helpers.expect
 local source = helpers.source
 local command = helpers.command
 
-describe(':execute, :while and :if', function()
+describe(":execute, :while and :if", function()
   setup(clear)
 
-  it('is working', function()
-    source([[
+  it("is working", function()
+    source [[
       let i = 0
       while i < 12
         let i = i + 1
@@ -36,13 +36,13 @@ describe(':execute, :while and :if', function()
         endif
       endwhile
       unlet i j
-    ]])
+    ]]
 
     -- Remove empty line
-    command('1d')
+    command "1d"
 
     -- Assert buffer contents.
-    expect([[
+    expect [[
       1x999999999888888887777777666666555554444333221
       2
       3x999999999888888887777777666666555554444333221
@@ -51,6 +51,6 @@ describe(':execute, :while and :if', function()
       6
       7x999999999888888887777777666666555554444333221
       8
-      9x]])
+      9x]]
   end)
 end)

@@ -1,14 +1,14 @@
-require('vim.compat')
+require "vim.compat"
 
 local buf_hls = {}
 
 local function highlight_line(line, linenr)
   local chars = {}
-  local prev_char = ''
+  local prev_char = ""
   local overstrike, escape = false, false
   local hls = {} -- Store highlight groups as { attr, start, final }
   local NONE, BOLD, UNDERLINE, ITALIC = 0, 1, 2, 3
-  local hl_groups = {[BOLD]="manBold", [UNDERLINE]="manUnderline", [ITALIC]="manItalic"}
+  local hl_groups = { [BOLD] = "manBold", [UNDERLINE] = "manUnderline", [ITALIC] = "manItalic" }
   local attr = NONE
   local byte = 0 -- byte offset
 
@@ -47,7 +47,7 @@ local function highlight_line(line, linenr)
     end
 
     if continue_hl then
-      hls[#hls + 1] = {attr=attr, start=byte, final=-1}
+      hls[#hls + 1] = { attr = attr, start = byte, final = -1 }
     else
       if attr == NONE then
         for a, _ in pairs(hl_groups) do
@@ -63,27 +63,27 @@ local function highlight_line(line, linenr)
   -- can be represented in one byte. Any code point above that is represented by
   -- a leading byte (0xc0 and above) and continuation bytes (0x80 to 0xbf, or
   -- decimal 128 to 191).
-  for char in line:gmatch("[^\128-\191][\128-\191]*") do
+  for char in line:gmatch "[^\128-\191][\128-\191]*" do
     if overstrike then
       local last_hl = hls[#hls]
       if char == prev_char then
-        if char == '_' and attr == UNDERLINE and last_hl and last_hl.final == byte then
+        if char == "_" and attr == UNDERLINE and last_hl and last_hl.final == byte then
           -- This underscore is in the middle of an underlined word
           attr = UNDERLINE
         else
           attr = BOLD
         end
-      elseif prev_char == '_' then
+      elseif prev_char == "_" then
         -- char is underlined
         attr = UNDERLINE
-      elseif prev_char == '+' and char == 'o' then
+      elseif prev_char == "+" and char == "o" then
         -- bullet (overstrike text '+^Ho')
         attr = BOLD
-        char = '·'
-      elseif prev_char == '·' and char == 'o' then
+        char = "·"
+      elseif prev_char == "·" and char == "o" then
         -- bullet (additional handling for '+^H+^Ho^Ho')
         attr = BOLD
-        char = '·'
+        char = "·"
       else
         -- use plain char
         attr = NONE
@@ -93,11 +93,11 @@ local function highlight_line(line, linenr)
       if last_hl and last_hl.attr == attr and last_hl.final == byte then
         last_hl.final = byte + #char
       else
-        hls[#hls + 1] = {attr=attr, start=byte, final=byte + #char}
+        hls[#hls + 1] = { attr = attr, start = byte, final = byte + #char }
       end
 
       overstrike = false
-      prev_char = ''
+      prev_char = ""
       byte = byte + #char
       chars[#chars + 1] = char
     elseif escape then
@@ -106,24 +106,24 @@ local function highlight_line(line, linenr)
       -- We only want to match against SGR sequences, which consist of ESC
       -- followed by '[', then a series of parameter and intermediate bytes in
       -- the range 0x20 - 0x3f, then 'm'. (See ECMA-48, sections 5.4 & 8.3.117)
-      local sgr = prev_char:match("^%[([\032-\063]*)m$")
+      local sgr = prev_char:match "^%[([\032-\063]*)m$"
       -- Ignore escape sequences with : characters, as specified by ITU's T.416
       -- Open Document Architecture and interchange format.
       if sgr and not string.find(sgr, ":") then
         local match
         while sgr and #sgr > 0 do
           -- Match against SGR parameters, which may be separated by ';'
-          match, sgr = sgr:match("^(%d*);?(.*)")
+          match, sgr = sgr:match "^(%d*);?(.*)"
           add_attr_hl(match + 0) -- coerce to number
         end
         escape = false
-      elseif not prev_char:match("^%[[\032-\063]*$") then
+      elseif not prev_char:match "^%[[\032-\063]*$" then
         -- Stop looking if this isn't a partial CSI sequence
         escape = false
       end
     elseif char == "\027" then
       escape = true
-      prev_char = ''
+      prev_char = ""
     elseif char == "\b" then
       overstrike = true
       prev_char = chars[#chars]
@@ -143,12 +143,12 @@ local function highlight_line(line, linenr)
         hl_groups[hl.attr],
         linenr - 1,
         hl.start,
-        hl.final
+        hl.final,
       }
     end
   end
 
-  return table.concat(chars, '')
+  return table.concat(chars, "")
 end
 
 local function highlight_man_page()

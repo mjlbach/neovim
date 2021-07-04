@@ -1,5 +1,5 @@
 local a = vim.api
-local language = require'vim.treesitter.language'
+local language = require "vim.treesitter.language"
 
 -- query: pattern matching on trees
 -- predicate matching is implemented in lua
@@ -25,7 +25,7 @@ end
 
 ---@private
 local function safe_read(filename, read_quantifier)
-  local file, err = io.open(filename, 'r')
+  local file, err = io.open(filename, "r")
   if not file then
     error(err)
   end
@@ -40,10 +40,12 @@ end
 --- @param query_name The name of the query to load
 --- @param is_included Internal parameter, most of the time left as `nil`
 function M.get_query_files(lang, query_name, is_included)
-  local query_path = string.format('queries/%s/%s.scm', lang, query_name)
+  local query_path = string.format("queries/%s/%s.scm", lang, query_name)
   local lang_files = dedupe_files(a.nvim_get_runtime_file(query_path, true))
 
-  if #lang_files == 0 then return {} end
+  if #lang_files == 0 then
+    return {}
+  end
 
   local base_langs = {}
 
@@ -55,14 +57,14 @@ function M.get_query_files(lang, query_name, is_included)
   local MODELINE_FORMAT = "^;+%s*inherits%s*:?%s*([a-z_,()]+)%s*$"
 
   for _, file in ipairs(lang_files) do
-    local modeline = safe_read(file, '*l')
+    local modeline = safe_read(file, "*l")
 
     if modeline then
       local langlist = modeline:match(MODELINE_FORMAT)
 
       if langlist then
-        for _, incllang in ipairs(vim.split(langlist, ',', true)) do
-          local is_optional = incllang:match("%(.*%)")
+        for _, incllang in ipairs(vim.split(langlist, ",", true)) do
+          local is_optional = incllang:match "%(.*%)"
 
           if is_optional then
             if not is_included then
@@ -90,11 +92,11 @@ end
 local function read_query_files(filenames)
   local contents = {}
 
-  for _,filename in ipairs(filenames) do
-    table.insert(contents, safe_read(filename, '*a'))
+  for _, filename in ipairs(filenames) do
+    table.insert(contents, safe_read(filename, "*a"))
   end
 
-  return table.concat(contents, '')
+  return table.concat(contents, "")
 end
 
 --- The explicitly set queries from |vim.treesitter.query.set_query()|
@@ -178,10 +180,10 @@ function M.get_node_text(node, source)
     if start_row ~= end_row then
       return nil
     end
-    local line = a.nvim_buf_get_lines(source, start_row, start_row+1, true)[1]
-    return string.sub(line, start_col+1, end_col)
+    local line = a.nvim_buf_get_lines(source, start_row, start_row + 1, true)[1]
+    return string.sub(line, start_col + 1, end_col)
   elseif type(source) == "string" then
-    return source:sub(start_byte+1, end_byte)
+    return source:sub(start_byte + 1, end_byte)
   end
 end
 
@@ -189,44 +191,44 @@ end
 -- (match, pattern, bufnr, predicate)
 local predicate_handlers = {
   ["eq?"] = function(match, _, source, predicate)
-      local node = match[predicate[2]]
-      local node_text = M.get_node_text(node, source)
+    local node = match[predicate[2]]
+    local node_text = M.get_node_text(node, source)
 
-      local str
-      if type(predicate[3]) == "string" then
-        -- (#eq? @aa "foo")
-        str = predicate[3]
-      else
-        -- (#eq? @aa @bb)
-        str = M.get_node_text(match[predicate[3]], source)
-      end
+    local str
+    if type(predicate[3]) == "string" then
+      -- (#eq? @aa "foo")
+      str = predicate[3]
+    else
+      -- (#eq? @aa @bb)
+      str = M.get_node_text(match[predicate[3]], source)
+    end
 
-      if node_text ~= str or str == nil then
-        return false
-      end
+    if node_text ~= str or str == nil then
+      return false
+    end
 
-      return true
+    return true
   end,
 
   ["lua-match?"] = function(match, _, source, predicate)
-      local node = match[predicate[2]]
-      local regex = predicate[3]
-      local start_row, _, end_row, _ = node:range()
-      if start_row ~= end_row then
-        return false
-      end
+    local node = match[predicate[2]]
+    local regex = predicate[3]
+    local start_row, _, end_row, _ = node:range()
+    if start_row ~= end_row then
+      return false
+    end
 
-      return string.find(M.get_node_text(node, source), regex)
+    return string.find(M.get_node_text(node, source), regex)
   end,
 
   ["match?"] = (function()
-    local magic_prefixes = {['\\v']=true, ['\\m']=true, ['\\M']=true, ['\\V']=true}
+    local magic_prefixes = { ["\\v"] = true, ["\\m"] = true, ["\\M"] = true, ["\\V"] = true }
     ---@private
     local function check_magic(str)
-      if string.len(str) < 2 or magic_prefixes[string.sub(str,1,2)] then
+      if string.len(str) < 2 or magic_prefixes[string.sub(str, 1, 2)] then
         return str
       end
-      return '\\v'..str
+      return "\\v" .. str
     end
 
     local compiled_vim_regexes = setmetatable({}, {
@@ -234,7 +236,7 @@ local predicate_handlers = {
         local res = vim.regex(check_magic(pattern))
         rawset(t, pattern, res)
         return res
-      end
+      end,
     })
 
     return function(match, _, source, pred)
@@ -253,7 +255,7 @@ local predicate_handlers = {
     local node = match[predicate[2]]
     local node_text = M.get_node_text(node, source)
 
-    for i=3,#predicate do
+    for i = 3, #predicate do
       if string.find(node_text, predicate[i], 1, true) then
         return true
       end
@@ -271,7 +273,7 @@ local predicate_handlers = {
     local string_set = predicate["string_set"]
     if not string_set then
       string_set = {}
-      for i=3,#predicate do
+      for i = 3, #predicate do
         string_set[predicate[i]] = true
       end
       predicate["string_set"] = string_set
@@ -283,7 +285,6 @@ local predicate_handlers = {
 
 -- As we provide lua-match? also expose vim-match?
 predicate_handlers["vim-match?"] = predicate_handlers["match?"]
-
 
 -- Directives store metadata or perform side effects against a match.
 -- Directives should always end with a `!`.
@@ -307,7 +308,7 @@ local directive_handlers = {
   -- Example: (#offset! @_node 0 1 0 -1)
   ["offset!"] = function(match, _, _, pred, metadata)
     local offset_node = match[pred[2]]
-    local range = {offset_node:range()}
+    local range = { offset_node:range() }
     local start_row_offset = pred[3] or 0
     local start_col_offset = pred[4] or 0
     local end_row_offset = pred[5] or 0
@@ -320,9 +321,9 @@ local directive_handlers = {
 
     -- If this produces an invalid range, we just skip it.
     if range[1] < range[3] or (range[1] == range[3] and range[2] <= range[4]) then
-      metadata.content = {range}
+      metadata.content = { range }
     end
-  end
+  end,
 }
 
 --- Adds a new predicate to be used in queries
@@ -422,7 +423,6 @@ function Query:apply_directives(match, pattern, source, metadata)
     end
   end
 end
-
 
 --- Returns the start and stop value if set else the node's range.
 -- When the node's range is used, the stop is incremented by 1

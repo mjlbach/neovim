@@ -14,7 +14,7 @@ function M.require_language(lang, path, silent)
     return true
   end
   if path == nil then
-    local fname = 'parser/' .. lang .. '.*'
+    local fname = "parser/" .. lang .. ".*"
     local paths = a.nvim_get_runtime_file(fname, false)
     if #paths == 0 then
       if silent then
@@ -22,13 +22,15 @@ function M.require_language(lang, path, silent)
       end
 
       -- TODO(bfredl): help tag?
-      error("no parser for '"..lang.."' language, see :help treesitter-parsers")
+      error("no parser for '" .. lang .. "' language, see :help treesitter-parsers")
     end
     path = paths[1]
   end
 
   if silent then
-    return pcall(function() vim._ts_add_language(path, lang) end)
+    return pcall(function()
+      vim._ts_add_language(path, lang)
+    end)
   else
     vim._ts_add_language(path, lang)
   end
